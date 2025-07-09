@@ -99,5 +99,50 @@ class AgentFactory:
                 idle_timeout=settings.get("idle_timeout", 15),
             )
 
+        elif conversation_agent_choice == "mcp_agent":
+            from .agents.mcp_agent import MCPAgent
+            
+            # Get the LLM provider choice from agent settings
+            mcp_settings: dict = agent_settings.get("mcp_agent", {})
+            llm_provider: str = mcp_settings.get("llm_provider")
+            
+            if not llm_provider:
+                raise ValueError("LLM provider not specified for MCP agent")
+            
+            # Get the LLM config for this provider
+            llm_config: dict = llm_configs.get(llm_provider)
+            interrupt_method: Literal["system", "user"] = llm_config.pop(
+                "interrupt_method", "user"
+            )
+            
+            if not llm_config:
+                raise ValueError(
+                    f"Configuration not found for LLM provider: {llm_provider}"
+                )
+            
+            # Create the stateless LLM
+            llm = StatelessLLMFactory.create_llm(
+                llm_provider=llm_provider, system_prompt=system_prompt, **llm_config
+            )
+            
+            # Get MCP configs
+            mcp_configs = mcp_settings.get("mcp_servers", {})
+            
+            # Create the agent
+            agent = MCPAgent(
+                llm=llm,
+                system=system_prompt,
+                live2d_model=live2d_model,
+                mcp_configs=mcp_configs,
+                tts_preprocessor_config=tts_preprocessor_config,
+                faster_first_response=mcp_settings.get(
+                    "faster_first_response", True
+                ),
+                segment_method=mcp_settings.get("segment_method", "pysbd"),
+                interrupt_method=interrupt_method,
+            )
+            
+            return agent
+
         else:
             raise ValueError(f"Unsupported agent type: {conversation_agent_choice}")

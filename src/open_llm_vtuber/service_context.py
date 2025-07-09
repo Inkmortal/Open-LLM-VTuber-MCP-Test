@@ -1,5 +1,6 @@
 import os
 import json
+import asyncio
 
 from loguru import logger
 from fastapi import WebSocket
@@ -231,11 +232,47 @@ class ServiceContext:
             # Save the current configuration
             self.character_config.agent_config = agent_config
             self.system_prompt = system_prompt
+            
+            # If it's an MCPAgent, we need to call start() to initialize MCP connections
+            if agent_config.conversation_agent_choice == "mcp_agent":
+                logger.info("MCPAgent created, MCP connections will be initialized during async startup")
 
         except Exception as e:
             logger.error(f"Failed to initialize agent: {e}")
             raise
 
+    async def initialize_async_components(self) -> None:
+        """Initialize any async components after the sync initialization"""
+        # Initialize MCP connections if using MCPAgent
+        if (self.agent_engine and 
+            self.character_config and 
+            self.character_config.agent_config and
+            self.character_config.agent_config.conversation_agent_choice == "mcp_agent"):
+            from .agent.agents.mcp_agent import MCPAgent
+            if isinstance(self.agent_engine, MCPAgent):
+                logger.info("Initializing MCP connections...")
+                try:
+                    await self.agent_engine.start()
+                except Exception as e:
+                    logger.error(f"Failed to initialize MCP connections: {e}")
+                    # Don't fail server startup if MCP fails to initialize
+                    logger.warning("Continuing without MCP connections")
+    
+    async def shutdown_async_components(self) -> None:
+        """Shutdown any async components gracefully"""
+        # Shutdown MCP connections if using MCPAgent
+        if (self.agent_engine and 
+            self.character_config and 
+            self.character_config.agent_config and
+            self.character_config.agent_config.conversation_agent_choice == "mcp_agent"):
+            from .agent.agents.mcp_agent import MCPAgent
+            if isinstance(self.agent_engine, MCPAgent):
+                logger.info("Shutting down MCP connections...")
+                try:
+                    await self.agent_engine.shutdown()
+                except Exception as e:
+                    logger.error(f"Failed to shutdown MCP connections cleanly: {e}")
+    
     def init_translate(self, translator_config: TranslatorConfig) -> None:
         """Initialize or update the translation engine based on the configuration."""
 

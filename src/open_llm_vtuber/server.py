@@ -1,10 +1,12 @@
 import os
 import shutil
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response
+from loguru import logger
 
 from .routes import init_client_ws_route, init_webtool_routes
 from .service_context import ServiceContext
@@ -29,7 +31,29 @@ class AvatarStaticFiles(StaticFiles):
 
 class WebSocketServer:
     def __init__(self, config: Config):
-        self.app = FastAPI()
+        # Initialize service context first
+        self.default_context_cache = ServiceContext()
+        
+        # Create lifespan context manager for async initialization
+        @asynccontextmanager
+        async def lifespan(app: FastAPI):
+            # Startup
+            logger.info("Starting up server...")
+            # Load config synchronously
+            self.default_context_cache.load_from_config(config)
+            
+            # Initialize async components (like MCP)
+            await self.default_context_cache.initialize_async_components()
+            logger.info("Server startup complete")
+            
+            yield
+            
+            # Shutdown
+            logger.info("Shutting down server...")
+            await self.default_context_cache.shutdown_async_components()
+        
+        # Create FastAPI app with lifespan
+        self.app = FastAPI(lifespan=lifespan)
 
         # Add CORS
         self.app.add_middleware(
@@ -40,16 +64,12 @@ class WebSocketServer:
             allow_headers=["*"],
         )
 
-        # Load configurations and initialize the default context cache
-        default_context_cache = ServiceContext()
-        default_context_cache.load_from_config(config)
-
-        # Include routes
+        # Include routes with the context
         self.app.include_router(
-            init_client_ws_route(default_context_cache=default_context_cache),
+            init_client_ws_route(default_context_cache=self.default_context_cache),
         )
         self.app.include_router(
-            init_webtool_routes(default_context_cache=default_context_cache),
+            init_webtool_routes(default_context_cache=self.default_context_cache),
         )
 
         # Mount cache directory first (to ensure audio file access)

@@ -39,3 +39,7 @@ class StatelessLLMInterface(metaclass=abc.ABCMeta):
         - APIError: For other API-related errors
         """
         raise NotImplementedError
+
+    async def supports_function_calling(self) -> bool:
+        """Check if this LLM supports function calling"""
+        return False  # Default, override in implementations

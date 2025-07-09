@@ -1,0 +1,5 @@
+# MCP (Model Context Protocol) dependencies
+# Install the official Python SDK
+mcp>=0.1.0
+# or install directly from GitHub:
+# git+https://github.com/modelcontextprotocol/python-sdk.git

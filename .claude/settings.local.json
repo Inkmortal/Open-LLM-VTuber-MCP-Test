@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:modelcontextprotocol.io)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "mcp__zen__chat",
+      "mcp__zen__thinkdeep",
+      "Bash(mkdir:*)",
+      "Bash(uv sync:*)",
+      "WebFetch(domain:community.atlassian.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(node:*)",
+      "Bash(uv run:*)",
+      "Bash(pkill:*)",
+      "Bash(rm:*)",
+      "Bash(ruff check:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(python3:*)",
+      "Bash(git checkout:*)",
+      "Bash(git reset:*)",
+      "WebFetch(domain:huggingface.co)",
+      "mcp__zen__debug",
+      "Bash(cmd:*)",
+      "Bash(python test:*)",
+      "Bash(python:*)",
+      "Bash(pip show:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "puppeteer",
+    "zen",
+    "notion"
+  ]
+}

@@ -45,6 +45,46 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
     }
 
 
+class MCPAgentConfig(I18nMixin, BaseModel):
+    """Configuration for the MCP agent with tool calling capabilities."""
+
+    llm_provider: Literal[
+        "openai_compatible_llm",
+        "claude_llm",
+        "llama_cpp_llm",
+        "ollama_llm",
+        "openai_llm",
+        "gemini_llm",
+        "zhipu_llm",
+        "deepseek_llm",
+        "groq_llm",
+        "mistral_llm",
+    ] = Field(..., alias="llm_provider")
+
+    faster_first_response: Optional[bool] = Field(True, alias="faster_first_response")
+    segment_method: Literal["regex", "pysbd"] = Field("pysbd", alias="segment_method")
+    mcp_servers: Optional[Dict[str, Dict]] = Field(default_factory=dict, alias="mcp_servers")
+    
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "llm_provider": Description(
+            en="LLM provider to use for this agent",
+            zh="MCP Agent 智能体使用的大语言模型选项",
+        ),
+        "faster_first_response": Description(
+            en="Whether to respond as soon as encountering a comma in the first sentence to reduce latency (default: True)",
+            zh="是否在第一句回应时遇上逗号就直接生成音频以减少首句延迟（默认：True）",
+        ),
+        "segment_method": Description(
+            en="Method for segmenting sentences: 'regex' or 'pysbd' (default: 'pysbd')",
+            zh="分割句子的方法：'regex' 或 'pysbd'（默认：'pysbd'）",
+        ),
+        "mcp_servers": Description(
+            en="MCP server configurations for tool calling",
+            zh="用于工具调用的 MCP 服务器配置",
+        ),
+    }
+
+
 class Mem0VectorStoreConfig(I18nMixin, BaseModel):
     """Configuration for Mem0 vector store."""
 
@@ -140,6 +180,7 @@ class AgentSettings(I18nMixin, BaseModel):
     )
     mem0_agent: Optional[Mem0Config] = Field(None, alias="mem0_agent")
     hume_ai_agent: Optional[HumeAIConfig] = Field(None, alias="hume_ai_agent")
+    mcp_agent: Optional[MCPAgentConfig] = Field(None, alias="mcp_agent")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "basic_memory_agent": Description(
@@ -149,6 +190,10 @@ class AgentSettings(I18nMixin, BaseModel):
         "hume_ai_agent": Description(
             en="Configuration for Hume AI agent", zh="Hume AI 代理配置"
         ),
+        "mcp_agent": Description(
+            en="Configuration for MCP agent with tool calling capabilities", 
+            zh="具有工具调用功能的 MCP 代理配置"
+        ),
     }
 
 
@@ -156,7 +201,7 @@ class AgentConfig(I18nMixin, BaseModel):
     """This class contains all of the configurations related to agent."""
 
     conversation_agent_choice: Literal[
-        "basic_memory_agent", "mem0_agent", "hume_ai_agent"
+        "basic_memory_agent", "mem0_agent", "hume_ai_agent", "mcp_agent"
     ] = Field(..., alias="conversation_agent_choice")
     agent_settings: AgentSettings = Field(..., alias="agent_settings")
     llm_configs: StatelessLLMConfigs = Field(..., alias="llm_configs")
