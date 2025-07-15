@@ -31,7 +31,7 @@ def sentence_divider(
             divider = SentenceDivider(
                 faster_first_response=faster_first_response,
                 segment_method=segment_method,
-                valid_tags=valid_tags or [],
+                valid_tags=valid_tags or ["think", "thought", "speak"],
             )
             token_stream = func(*args, **kwargs)
             async for sentence in divider.process_stream(token_stream):
@@ -88,16 +88,35 @@ def display_processor():
 
             async for sentence, actions in stream:
                 text = sentence.text
-                # Handle think tag states
+                should_display = True
+                
+                # First, check if this is a thought block - this takes precedence
+                is_thought_block = False
                 for tag in sentence.tags:
-                    if tag.name == "think":
-                        if tag.state == TagState.START:
-                            text = "("
-                        elif tag.state == TagState.END:
-                            text = ")"
+                    if tag.name == "thought" and tag.state in [TagState.INSIDE, TagState.START, TagState.END]:
+                        is_thought_block = True
+                        break  # Found a thought tag, no need to check further
+                
+                if is_thought_block:
+                    should_display = False  # Thought blocks are never displayed
+                else:
+                    # Only process other tags if this isn't a thought block
+                    for tag in sentence.tags:
+                        if tag.name == "think":
+                            # Legacy think tag handling
+                            if tag.state == TagState.START:
+                                text = "("
+                            elif tag.state == TagState.END:
+                                text = ")"
+                        elif tag.name == "speak":
+                            # Speak tag - always display (unless it's a thought block)
+                            if tag.state in [TagState.START, TagState.END]:
+                                text = ""  # Don't show the tag markers
 
-                display = DisplayText(text=text)  # Simplified DisplayText creation
-                yield sentence, display, actions
+                # Only yield if we should display this content
+                if should_display:
+                    display = DisplayText(text=text)
+                    yield sentence, display, actions
 
         return wrapper
 
@@ -123,7 +142,8 @@ def tts_filter(
             config = tts_preprocessor_config or TTSPreprocessorConfig()
 
             async for sentence, display, actions in sentence_stream:
-                if any(tag.name == "think" for tag in sentence.tags):
+                # Skip TTS for think/thought tags
+                if any(tag.name in ["think", "thought"] for tag in sentence.tags):
                     tts = ""
                 else:
                     tts = filter_text(

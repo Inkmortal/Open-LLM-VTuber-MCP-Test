@@ -22,10 +22,10 @@ User Input → WebSocket → Message Handler → Agent → LLM → Response Pipe
 ```
 
 #### 4. Processing Pipeline (`transformers.py`)
-- **sentence_divider**: Splits LLM output into sentences
-- **actions_extractor**: Extracts Live2D expressions/actions
-- **display_processor**: Formats text for display
-- **tts_filter**: Prepares text for speech synthesis
+- **sentence_divider**: Splits LLM output into sentences (must include all valid tags)
+- **actions_extractor**: Extracts Live2D expressions ([emotion] format only)
+- **display_processor**: Formats text for display (tag precedence is critical)
+- **tts_filter**: Prepares text for speech synthesis (filters angle brackets, asterisks, etc.)
 
 ## MCP Integration Points
 
@@ -138,3 +138,32 @@ StatelessLLM         MCP Client
 - System continues working if MCP fails
 - Clear error messages to users
 - Fallback to conversation-only mode
+
+## Implementation Learnings
+
+### Critical Discoveries
+1. **Tag Processing Order Matters**
+   - Display processor must check thought tags BEFORE other tags
+   - Tag precedence prevents display override issues
+   - All tags must be registered in sentence_divider's valid_tags
+
+2. **Live2D vs Action Descriptions**
+   - Live2D uses [emotion] format, not asterisks
+   - Action descriptions (*action* or ::action::) are non-functional
+   - Only emotions in emotionMap actually trigger model expressions
+
+3. **MCP Session Management**
+   - ClientSession must be used as async context manager
+   - Message loop won't start without proper initialization
+   - Tool results need careful serialization handling
+
+4. **Streaming vs Tool Execution**
+   - Multi-turn tool calling requires passing tools in summary phase
+   - Empty tool_call_id from Gemini needs ID generation
+   - Recursive tool execution enables complex workflows
+
+### Best Practices
+- Keep thoughts extremely brief to avoid verbose output
+- Use tag-based separation for clean content filtering
+- Prioritize functional behavior over perfect autonomy
+- Test with real MCP servers early to catch integration issues

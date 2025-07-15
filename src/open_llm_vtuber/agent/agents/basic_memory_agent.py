@@ -251,7 +251,7 @@ class BasicMemoryAgent(AgentInterface):
         @sentence_divider(
             faster_first_response=self._faster_first_response,
             segment_method=self._segment_method,
-            valid_tags=["think"],
+            valid_tags=["think", "thought", "speak"],
         )
         async def chat_with_memory(input_data: BatchInput) -> AsyncIterator[str]:
             """

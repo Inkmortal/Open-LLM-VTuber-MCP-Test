@@ -6,9 +6,50 @@
 - ✅ Identified integration points in the codebase
 - ✅ Created initial memory bank documentation
 - ✅ **Implemented core MCP integration** (2025-07-09)
-- Ready for testing
+- ✅ **Fixed all major issues and improved UX** (2025-07-09)
+- ✅ **MCP Integration at Acceptable Levels** (2025-07-09)
+- Room for improvement in autonomous tool usage
 
-## Recent Implementation (2025-07-09)
+## Recent Fixes & Improvements (2025-07-09)
+
+### Major Issues Resolved
+1. **MCP Server Connection Hanging** ✅
+   - Fixed: ClientSession needs to be used as context manager
+   - Added: `await self.exit_stack.enter_async_context(ClientSession(read, write))`
+
+2. **Tool Attribute Compatibility** ✅
+   - Fixed: Handle both `input_schema` and `inputSchema`
+   - Changed WSL paths to Windows paths in config
+
+3. **CallToolResult Serialization** ✅
+   - Fixed: Extract content from MCP SDK's CallToolResult objects
+   - Added proper content extraction logic
+
+4. **Empty Tool Call IDs** ✅
+   - Fixed: Generate IDs when Gemini API provides empty strings
+   - Format: `call_{index}_{tool_name}`
+
+5. **Multi-Turn Tool Calling** ✅
+   - Fixed: Pass tools parameter in summary phase
+   - Enabled recursive tool execution
+
+### UX Improvements
+1. **Tag-Based Content Separation** ✅
+   - Added `<thought>` tags for internal reasoning (not spoken)
+   - Added `<speak>` tags for user-facing content (spoken)
+   - Modified transformers to handle new tags
+
+2. **Proactive Agent Behavior** ✅
+   - Updated system prompt with "Proactive Mandate"
+   - Added ALWAYS/NEVER behavioral principles
+   - Changed thought formatting to bullet points
+   - Removed third-person narration
+
+3. **Display & Formatting Fixes** ✅
+   - Fixed thought tag display by adding "thought" and "speak" to valid_tags
+   - Removed action descriptions (::action::) as they were non-functional
+   - Fixed asterisk filtering to preserve content while removing asterisk characters
+   - Ensured thought content is completely hidden from users
 
 ### Architecture Understanding
 1. **Agent System**: The VTuber uses an agent-based architecture with `AgentInterface` as the base
@@ -46,9 +87,25 @@ Decided on agent-level integration approach:
    - Service context initialization
    - Configuration already in place
 
+## Remaining Improvements
+
+### Agent Intelligence
+While the MCP integration is functional, the agent could be smarter in:
+1. **Tool Discovery**: Agent should explore available tools more proactively
+2. **Query Construction**: Better at inferring parameters and constructing queries
+3. **Error Recovery**: Try alternative approaches when first attempt fails
+4. **Context Inference**: Better at understanding implicit context from user requests
+5. **Multi-Step Planning**: Plan complex sequences without user guidance
+
+### Examples of Current Limitations
+- Agent asks for clarification instead of trying different queries
+- Doesn't always chain tools effectively (e.g., get user info then search)
+- Could be more creative in problem-solving approaches
+- Sometimes gives up too easily when initial approach fails
+
 ## Next Steps
 
-### Testing Phase
+### Enhancement Opportunities
 1. **Install Dependencies**
    - Install mcp Python package
    - Verify Node.js and npx are available
@@ -91,3 +148,24 @@ Decided on agent-level integration approach:
 
 ## Project Context
 This is a personal project to enhance the Open-LLM-VTuber with agentic capabilities. The main goal is to transform the VTuber from a conversational companion into an AI assistant that can perform actions through MCP tools while maintaining its personality and real-time interaction capabilities.
+
+## Teams Meeting Bot Development (2025-01-15)
+
+### Architecture Finalized
+After extensive research and consultation:
+1. **Three-Channel Monitoring**
+   - Audio: OpenWakeWord for activation only
+   - Chat: Graph API for @mentions
+   - Captions: DOM scraping for context
+
+2. **Audio/Video Pipeline**
+   - PulseAudio for dynamic audio routing
+   - v4l2loopback for virtual camera
+   - Live avatar rendering via HTML/WebSocket
+
+3. **Implementation Approach**
+   - Meeting bot as WebSocket client to existing server
+   - Docker container with Playwright
+   - Phased implementation starting with audio/video POC
+
+See `meetingBotArchitecture.md` for complete details.
