@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  vtuber-meeting-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.cloud
+    container_name: vtuber-meeting-bot
+    ports:
+      - "5900:5900"  # VNC for monitoring
+    environment:
+      - DISPLAY=:99
+      - VNC_PASSWORD=vtuber123
+      - VTUBER_URL=http://host.docker.internal:12393
+      - MEETING_URL=${MEETING_URL}  # Pass meeting URL as env variable
+    volumes:
+      - /dev/shm:/dev/shm  # Shared memory for Chrome
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - vtuber-net
+
+networks:
+  vtuber-net:
+    driver: bridge

@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  vtuber-av-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.cloud
+    container_name: vtuber-av-test
+    ports:
+      - "5900:5900"  # VNC for monitoring
+    environment:
+      - DISPLAY=:99
+      - VNC_PASSWORD=test123
+      - VTUBER_URL=http://host.docker.internal:12393
+      - TEST_MODE=true  # Run in test mode
+    volumes:
+      - /dev/shm:/dev/shm  # Shared memory for Chrome
+      - ./test_av_pipeline.html:/test_av_pipeline.html:ro
+      - ./test_av_complete.py:/test_av_complete.py:ro
+      - ./validate_pipeline.py:/validate_pipeline.py:ro
+      - ./test_startup.sh:/test_startup.sh:ro
+      - ./stream_vtuber_canvas.py:/stream_vtuber_canvas.py:ro
+      - ./simple_vtuber.html:/simple_vtuber.html:ro
+      - ./run_virtual_camera.py:/run_virtual_camera.py:ro
+      - ./run_virtual_camera_v2.py:/run_virtual_camera_v2.py:ro
+      - ./run_virtual_camera_final.py:/run_virtual_camera_final.py:ro
+      - ./run_virtual_camera_http.py:/run_virtual_camera_http.py:ro
+      - ./run_virtual_camera_fullview.py:/run_virtual_camera_fullview.py:ro
+      - ./run_virtual_camera_direct_ip.py:/run_virtual_camera_direct_ip.py:ro
+      - ./run_virtual_camera_localhost.py:/run_virtual_camera_localhost.py:ro
+      - ./run_virtual_camera_proxy.py:/run_virtual_camera_proxy.py:ro
+      - ./run_virtual_camera_webgl.py:/run_virtual_camera_webgl.py:ro
+      - ./run_virtual_camera_mesa.py:/run_virtual_camera_mesa.py:ro
+      - ./run_virtual_camera_hybrid.py:/run_virtual_camera_hybrid.py:ro
+      - ./run_virtual_camera_angle.py:/run_virtual_camera_angle.py:ro
+      - ./run_virtual_camera_diagnostic_v2.py:/run_virtual_camera_diagnostic_v2.py:ro
+      - ./test_diagnostic.sh:/test_diagnostic.sh:ro
+      - ./run_virtual_camera_http_proxy.py:/run_virtual_camera_http_proxy.py:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    entrypoint: ["/bin/bash"]
+    command: ["/test_startup.sh"]
+    networks:
+      - vtuber-net
+
+networks:
+  vtuber-net:
+    driver: bridge

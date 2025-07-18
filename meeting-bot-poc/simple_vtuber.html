@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple VTuber Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #2a2a2a;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        #avatar {
+            width: 640px;
+            height: 480px;
+            background: #1a1a1a;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        #vtuber-placeholder {
+            font-size: 48px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 5px;
+        }
+        .speaking {
+            animation: speak 0.5s infinite alternate;
+        }
+        @keyframes speak {
+            0% { transform: scale(1) rotate(-2deg); }
+            100% { transform: scale(1.05) rotate(2deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>VTuber Test Interface</h1>
+    <div id="avatar">
+        <div id="vtuber-placeholder">🤖</div>
+    </div>
+    <div id="status">
+        <p>Status: <span id="connection-status">Not connected</span></p>
+        <p>WebSocket: <span id="ws-status">Disconnected</span></p>
+    </div>
+    
+    <script>
+        // Simulate VTuber activity
+        let speaking = false;
+        const avatar = document.getElementById('vtuber-placeholder');
+        
+        // Connect to WebSocket
+        function connectWebSocket() {
+            const ws = new WebSocket('ws://localhost:12393/client-ws');
+            
+            ws.onopen = () => {
+                document.getElementById('connection-status').textContent = 'Connected';
+                document.getElementById('ws-status').textContent = 'Connected';
+                console.log('WebSocket connected');
+            };
+            
+            ws.onmessage = (event) => {
+                console.log('Received:', event.data);
+                // Simulate speaking animation
+                avatar.classList.add('speaking');
+                setTimeout(() => {
+                    avatar.classList.remove('speaking');
+                }, 2000);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                document.getElementById('ws-status').textContent = 'Error';
+            };
+            
+            ws.onclose = () => {
+                document.getElementById('connection-status').textContent = 'Disconnected';
+                document.getElementById('ws-status').textContent = 'Disconnected';
+                // Reconnect after 5 seconds
+                setTimeout(connectWebSocket, 5000);
+            };
+        }
+        
+        // Start connection
+        connectWebSocket();
+        
+        // Simulate periodic "speaking"
+        setInterval(() => {
+            if (Math.random() > 0.7) {
+                avatar.classList.add('speaking');
+                setTimeout(() => {
+                    avatar.classList.remove('speaking');
+                }, 1000 + Math.random() * 2000);
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

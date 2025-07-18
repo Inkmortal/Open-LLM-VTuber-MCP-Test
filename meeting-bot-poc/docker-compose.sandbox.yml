@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  vtuber-sandbox:
+    build:
+      context: .
+      dockerfile: Dockerfile.sandbox
+    container_name: vtuber-sandbox
+    privileged: false  # No longer needed without v4l2loopback
+    ports:
+      - "5900:5900"  # VNC port
+      - "6080:6080"  # noVNC web port (optional)
+    environment:
+      - DISPLAY=:99
+      - VTUBER_URL=ws://host.docker.internal:12393/client-ws
+    volumes:
+      - /dev/shm:/dev/shm  # Shared memory for Chrome
+      - ./video_pipe:/tmp/video_pipe  # Named pipe for video
+    networks:
+      - vtuber-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  vtuber-net:
+    driver: bridge

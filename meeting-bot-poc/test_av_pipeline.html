@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VTuber A/V Pipeline Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .panel {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        h1, h2 {
+            margin-top: 0;
+        }
+        canvas {
+            width: 100%;
+            border: 2px solid #444;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .status.success {
+            background: #155724;
+            border: 1px solid #1e7e34;
+        }
+        .status.error {
+            background: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #004085;
+            border: 1px solid #b8daff;
+        }
+        .meter {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .meter-fill {
+            height: 100%;
+            background: #00ff00;
+            transition: width 0.1s;
+        }
+        .timestamp {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px;
+            background: #333;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>VTuber Audio/Video Pipeline Test</h1>
+    
+    <div class="container">
+        <!-- Video Test Panel -->
+        <div class="panel">
+            <h2>Video Test</h2>
+            <canvas id="videoCanvas" width="640" height="480"></canvas>
+            <div class="timestamp" id="timestamp">00:00:00</div>
+            <button onclick="startVideoTest()">Start Video Test</button>
+            <button onclick="stopVideoTest()">Stop Video Test</button>
+            <button onclick="cyclePattern()">Cycle Pattern</button>
+            <div id="videoStatus" class="status info">Video test ready</div>
+        </div>
+
+        <!-- Audio Test Panel -->
+        <div class="panel">
+            <h2>Audio Test</h2>
+            <button onclick="playTestTone(440)">Play 440Hz Tone</button>
+            <button onclick="playTestTone(880)">Play 880Hz Tone</button>
+            <button onclick="speakTest()">Speak Test Message</button>
+            <button onclick="playWhiteNoise()">White Noise</button>
+            <button onclick="stopAudio()">Stop Audio</button>
+            
+            <h3>Audio Level</h3>
+            <div class="meter">
+                <div class="meter-fill" id="audioMeter"></div>
+            </div>
+            
+            <div id="audioStatus" class="status info">Audio test ready</div>
+        </div>
+
+        <!-- WebRTC Test Panel -->
+        <div class="panel">
+            <h2>WebRTC Media Devices</h2>
+            <button onclick="enumerateDevices()">List Devices</button>
+            <button onclick="testCamera()">Test Camera Access</button>
+            <button onclick="testMicrophone()">Test Microphone Access</button>
+            
+            <h3>Available Devices</h3>
+            <div id="deviceList" class="status info">Click "List Devices" to enumerate</div>
+            
+            <h3>Media Stream Preview</h3>
+            <video id="preview" width="100%" autoplay muted></video>
+        </div>
+
+        <!-- System Status Panel -->
+        <div class="panel">
+            <h2>Pipeline Status</h2>
+            <div id="pipelineStatus">
+                <div class="status info">Checking pipeline components...</div>
+            </div>
+            
+            <h3>Test Results</h3>
+            <div id="testResults"></div>
+        </div>
+    </div>
+
+    <script>
+        let audioContext;
+        let videoInterval;
+        let currentPattern = 0;
+        let analyser;
+        let audioSource;
+
+        // Initialize audio context
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+            }
+        }
+
+        // Video test patterns
+        const patterns = [
+            'colorBars',
+            'checkerboard',
+            'gradient',
+            'motion'
+        ];
+
+        function drawColorBars(ctx, width, height) {
+            const colors = ['#FFFFFF', '#FFFF00', '#00FFFF', '#00FF00', '#FF00FF', '#FF0000', '#0000FF', '#000000'];
+            const barWidth = width / colors.length;
+            
+            colors.forEach((color, i) => {
+                ctx.fillStyle = color;
+                ctx.fillRect(i * barWidth, 0, barWidth, height);
+            });
+        }
+
+        function drawCheckerboard(ctx, width, height) {
+            const size = 40;
+            for (let y = 0; y < height; y += size) {
+                for (let x = 0; x < width; x += size) {
+                    ctx.fillStyle = ((x / size + y / size) % 2 === 0) ? '#FFFFFF' : '#000000';
+                    ctx.fillRect(x, y, size, size);
+                }
+            }
+        }
+
+        function drawGradient(ctx, width, height) {
+            const gradient = ctx.createLinearGradient(0, 0, width, height);
+            gradient.addColorStop(0, 'red');
+            gradient.addColorStop(0.5, 'green');
+            gradient.addColorStop(1, 'blue');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        function drawMotion(ctx, width, height, time) {
+            const x = (Math.sin(time / 1000) + 1) * width / 2;
+            const y = (Math.cos(time / 1000) + 1) * height / 2;
+            
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, width, height);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(x, y, 50, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        function startVideoTest() {
+            const canvas = document.getElementById('videoCanvas');
+            const ctx = canvas.getContext('2d');
+            const startTime = Date.now();
+            
+            document.getElementById('videoStatus').className = 'status success';
+            document.getElementById('videoStatus').textContent = 'Video test running';
+            
+            videoInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                
+                // Draw pattern
+                switch (patterns[currentPattern]) {
+                    case 'colorBars':
+                        drawColorBars(ctx, canvas.width, canvas.height);
+                        break;
+                    case 'checkerboard':
+                        drawCheckerboard(ctx, canvas.width, canvas.height);
+                        break;
+                    case 'gradient':
+                        drawGradient(ctx, canvas.width, canvas.height);
+                        break;
+                    case 'motion':
+                        drawMotion(ctx, canvas.width, canvas.height, elapsed);
+                        break;
+                }
+                
+                // Update timestamp
+                const seconds = Math.floor(elapsed / 1000);
+                const minutes = Math.floor(seconds / 60);
+                const hours = Math.floor(minutes / 60);
+                const timestamp = `${String(hours).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+                document.getElementById('timestamp').textContent = timestamp;
+                
+                // Add timestamp to canvas
+                ctx.fillStyle = '#FFFF00';
+                ctx.font = '24px monospace';
+                ctx.fillText(timestamp, 10, 30);
+            }, 1000 / 30); // 30 FPS
+        }
+
+        function stopVideoTest() {
+            if (videoInterval) {
+                clearInterval(videoInterval);
+                videoInterval = null;
+            }
+            document.getElementById('videoStatus').className = 'status info';
+            document.getElementById('videoStatus').textContent = 'Video test stopped';
+        }
+
+        function cyclePattern() {
+            currentPattern = (currentPattern + 1) % patterns.length;
+            document.getElementById('videoStatus').textContent = `Pattern: ${patterns[currentPattern]}`;
+        }
+
+        function playTestTone(frequency) {
+            initAudio();
+            stopAudio();
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.3;
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(analyser);
+            analyser.connect(audioContext.destination);
+            
+            oscillator.start();
+            audioSource = oscillator;
+            
+            document.getElementById('audioStatus').className = 'status success';
+            document.getElementById('audioStatus').textContent = `Playing ${frequency}Hz tone`;
+            
+            updateAudioMeter();
+        }
+
+        function playWhiteNoise() {
+            initAudio();
+            stopAudio();
+            
+            const bufferSize = audioContext.sampleRate * 2;
+            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = buffer.getChannelData(0);
+            
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+            
+            const whiteNoise = audioContext.createBufferSource();
+            const gainNode = audioContext.createGain();
+            
+            whiteNoise.buffer = buffer;
+            whiteNoise.loop = true;
+            gainNode.gain.value = 0.1;
+            
+            whiteNoise.connect(gainNode);
+            gainNode.connect(analyser);
+            analyser.connect(audioContext.destination);
+            
+            whiteNoise.start();
+            audioSource = whiteNoise;
+            
+            document.getElementById('audioStatus').className = 'status success';
+            document.getElementById('audioStatus').textContent = 'Playing white noise';
+            
+            updateAudioMeter();
+        }
+
+        function speakTest() {
+            const utterance = new SpeechSynthesisUtterance('This is a VTuber audio pipeline test. Testing one, two, three.');
+            utterance.rate = 1;
+            utterance.pitch = 1;
+            
+            utterance.onstart = () => {
+                document.getElementById('audioStatus').className = 'status success';
+                document.getElementById('audioStatus').textContent = 'Speaking test message';
+            };
+            
+            utterance.onend = () => {
+                document.getElementById('audioStatus').className = 'status info';
+                document.getElementById('audioStatus').textContent = 'Speech completed';
+            };
+            
+            speechSynthesis.speak(utterance);
+        }
+
+        function stopAudio() {
+            if (audioSource) {
+                audioSource.stop();
+                audioSource = null;
+            }
+            speechSynthesis.cancel();
+            document.getElementById('audioStatus').className = 'status info';
+            document.getElementById('audioStatus').textContent = 'Audio stopped';
+        }
+
+        function updateAudioMeter() {
+            if (!analyser || !audioSource) return;
+            
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            
+            function update() {
+                if (!audioSource) return;
+                
+                analyser.getByteFrequencyData(dataArray);
+                const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+                const percentage = (average / 255) * 100;
+                
+                document.getElementById('audioMeter').style.width = percentage + '%';
+                
+                requestAnimationFrame(update);
+            }
+            
+            update();
+        }
+
+        async function enumerateDevices() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const deviceList = document.getElementById('deviceList');
+                
+                let html = '<h4>Video Inputs:</h4><ul>';
+                devices.filter(d => d.kind === 'videoinput').forEach(device => {
+                    html += `<li>${device.label || 'Camera ' + device.deviceId}</li>`;
+                });
+                html += '</ul><h4>Audio Inputs:</h4><ul>';
+                devices.filter(d => d.kind === 'audioinput').forEach(device => {
+                    html += `<li>${device.label || 'Microphone ' + device.deviceId}</li>`;
+                });
+                html += '</ul>';
+                
+                deviceList.innerHTML = html;
+                deviceList.className = 'status success';
+            } catch (err) {
+                document.getElementById('deviceList').className = 'status error';
+                document.getElementById('deviceList').textContent = 'Error: ' + err.message;
+            }
+        }
+
+        async function testCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.getElementById('preview');
+                video.srcObject = stream;
+                
+                addTestResult('Camera access', true, 'Successfully accessed camera');
+            } catch (err) {
+                addTestResult('Camera access', false, err.message);
+            }
+        }
+
+        async function testMicrophone() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Create audio visualization
+                initAudio();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                updateAudioMeter();
+                
+                addTestResult('Microphone access', true, 'Successfully accessed microphone');
+            } catch (err) {
+                addTestResult('Microphone access', false, err.message);
+            }
+        }
+
+        function addTestResult(test, success, message) {
+            const results = document.getElementById('testResults');
+            const result = document.createElement('div');
+            result.className = success ? 'status success' : 'status error';
+            result.textContent = `${test}: ${success ? '✓' : '✗'} ${message}`;
+            results.appendChild(result);
+        }
+
+        // Check pipeline status
+        function checkPipelineStatus() {
+            const status = document.getElementById('pipelineStatus');
+            const checks = [
+                { name: 'Browser environment', pass: true },
+                { name: 'WebRTC support', pass: 'mediaDevices' in navigator },
+                { name: 'Audio context', pass: 'AudioContext' in window || 'webkitAudioContext' in window },
+                { name: 'Canvas support', pass: !!document.getElementById('videoCanvas').getContext },
+                { name: 'Speech synthesis', pass: 'speechSynthesis' in window }
+            ];
+            
+            let html = '';
+            checks.forEach(check => {
+                html += `<div class="status ${check.pass ? 'success' : 'error'}">`;
+                html += `${check.name}: ${check.pass ? '✓ Available' : '✗ Not available'}</div>`;
+            });
+            
+            status.innerHTML = html;
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            checkPipelineStatus();
+            startVideoTest();
+        });
+    </script>
+</body>
+</html>

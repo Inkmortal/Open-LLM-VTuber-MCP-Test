@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  meeting-bot:
+    build: .
+    privileged: true  # Required for device access
+    network_mode: "host"  # Easier networking for POC
+    environment:
+      - DISPLAY=${DISPLAY}  # For GUI debugging
+      - VTUBER_SERVER_URL=ws://localhost:12393/client-ws
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw  # For GUI
+      - ./avatar:/home/vtuber/avatar:ro  # Avatar HTML
+      - /dev/video0:/dev/video0  # Virtual camera (if exists)
+    devices:
+      - /dev/snd  # All sound devices
+      - /dev/dri  # GPU acceleration (optional)
+    stdin_open: true
+    tty: true

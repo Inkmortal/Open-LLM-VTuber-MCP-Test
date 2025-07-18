@@ -46,7 +46,11 @@ TTS Engine → Audio File → PulseAudio Sink → module-loopback → Virtual So
 
 #### Video Flow (Avatar Display)
 ```
+# Original approach (requires kernel module):
 Avatar Renderer → HTML Canvas → Frame Capture → v4l2loopback → Virtual Camera → Browser
+
+# Cloud-deployable approach (userspace only):
+Avatar Renderer → Browser Window → FFmpeg Screen Capture → Named Pipe (Y4M) → Chrome --use-file-for-fake-video-capture
 ```
 
 ## Technical Components
@@ -132,7 +136,8 @@ load-module module-remap-source source_name=vtuber_mic master=vtuber_audio_sink.
 ### Audio/Video Injection
 - Chrome's `--use-file-for-fake-audio-capture` loads file ONCE
 - Must use PulseAudio for dynamic audio
-- v4l2loopback required for live video
+- **BREAKTHROUGH**: Chrome's `--use-file-for-fake-video-capture` works with named pipes!
+- v4l2loopback NOT required for cloud deployment - can use FFmpeg → pipe → Chrome
 
 ### DOM Scraping Resilience
 - Avoid CSS classes (change frequently)

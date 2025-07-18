@@ -1,0 +1,57 @@
+FROM ubuntu:22.04
+
+# Install necessary packages
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    wget \
+    gnupg \
+    curl \
+    ffmpeg \
+    xvfb \
+    x11vnc \
+    fluxbox \
+    pulseaudio \
+    python3 \
+    python3-pip \
+    supervisor \
+    sox \
+    libgl1-mesa-glx \
+    libegl1-mesa \
+    libgles2-mesa \
+    mesa-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Google Chrome
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip3 install playwright asyncio websockets aiohttp psutil \
+    && playwright install-deps chromium \
+    && playwright install chromium
+
+# Create necessary directories
+RUN mkdir -p /var/run/supervisor /var/log/supervisor
+
+# Copy configuration files
+COPY supervisord.cloud.conf /etc/supervisor/conf.d/supervisord.conf
+COPY entrypoint.cloud.sh /entrypoint.sh
+COPY stream_vtuber_to_pipe.py /stream_vtuber_to_pipe.py
+COPY meeting_bot_cloud.py /meeting_bot_cloud.py
+COPY capture_browser_audio.sh /capture_browser_audio.sh
+COPY route_vtuber_audio.py /route_vtuber_audio.py
+
+# Make scripts executable
+RUN chmod +x /entrypoint.sh /capture_browser_audio.sh
+
+# Expose VNC port for monitoring
+EXPOSE 5900
+
+# Set environment variables
+ENV DISPLAY=:99
+ENV PYTHONUNBUFFERED=1
+
+# Start with entrypoint
+ENTRYPOINT ["/entrypoint.sh"]

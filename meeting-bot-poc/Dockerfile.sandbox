@@ -1,0 +1,59 @@
+FROM ubuntu:22.04
+
+# Install desktop environment and required packages
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    # X11 and desktop
+    xvfb \
+    x11vnc \
+    fluxbox \
+    xterm \
+    # Audio
+    pulseaudio \
+    pavucontrol \
+    # Browser
+    firefox \
+    chromium-browser \
+    # Tools
+    ffmpeg \
+    python3-pip \
+    wget \
+    curl \
+    # Process management
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages
+RUN pip3 install websockets aiofiles playwright
+
+# Create user
+RUN useradd -m -s /bin/bash vtuber && \
+    echo 'vtuber:vtuber' | chpasswd && \
+    usermod -aG audio,video vtuber
+
+# Setup VNC
+RUN mkdir -p /home/vtuber/.vnc && \
+    x11vnc -storepasswd vtuber /home/vtuber/.vnc/passwd && \
+    chown -R vtuber:vtuber /home/vtuber/.vnc
+
+# Copy files
+COPY --chown=vtuber:vtuber supervisord.conf /etc/supervisor/conf.d/
+COPY --chown=vtuber:vtuber start_sandbox.sh /home/vtuber/
+COPY --chown=vtuber:vtuber stream_to_camera.sh /home/vtuber/
+COPY --chown=vtuber:vtuber meeting_bot_client.py /home/vtuber/
+COPY --chown=vtuber:vtuber avatar /home/vtuber/avatar/
+
+# Copy entrypoint
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Make scripts executable
+RUN chmod +x /home/vtuber/start_sandbox.sh /home/vtuber/stream_to_camera.sh
+
+WORKDIR /home/vtuber
+
+# Expose VNC port
+EXPOSE 5900
+
+# Run as root to allow supervisord to manage processes
+USER root
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
