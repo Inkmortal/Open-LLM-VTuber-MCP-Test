@@ -165,6 +165,42 @@
 - Consider adding more MCP servers (web search, code assistance)
 - Document usage patterns and best practices
 
+## Recent Updates (2025-07-30)
+
+### Configuration Changes
+1. **ASR Configuration**:
+   - User switched back to faster_whisper after Sherpa issues
+   - Configured with CUDA support for better performance
+   - Hotwords configuration remains available for Sherpa
+
+2. **MCP Servers Status**:
+   - ✅ filesystem - Working correctly
+   - ✅ esp32_iot - Working after path fixes
+   - ✅ aqueduct - Working after enum fixes
+   - ❌ atlassian - Has timeout issues, user wants to remove
+
+### Bugs Fixed
+1. **Aqueduct Empty Enum Values**:
+   - Fixed FastMCP's invalid empty string literals in enums
+   - Changed to use Optional[Literal[...]] pattern
+   - Updated parameter handling to check for None
+
+2. **Gemini Schema Compatibility**:
+   - Created schema simplification for anyOf patterns
+   - Extracts non-null schemas from anyOf arrays
+   - Ensures Gemini API can understand tool schemas
+
+3. **Debug Logging Added**:
+   - Comprehensive logging for tool execution
+   - Helps verify tools are actually being called
+   - Distinguishes between real execution and hallucination
+
+### Configuration Best Practices Learned
+1. **Windows Paths**: Always use forward slashes in YAML
+2. **MCP Servers**: Test each server individually before adding multiple
+3. **Schema Design**: Avoid empty strings in enums for Gemini compatibility
+4. **Debugging**: Add logging at tool execution points to verify behavior
+
 ## Teams Meeting Bot Development (2025-01-15)
 
 ### Architecture Research Complete ✅

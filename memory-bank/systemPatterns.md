@@ -167,3 +167,37 @@ StatelessLLM         MCP Client
 - Use tag-based separation for clean content filtering
 - Prioritize functional behavior over perfect autonomy
 - Test with real MCP servers early to catch integration issues
+
+## MCP Server Integration Patterns
+
+### Schema Compatibility
+1. **Gemini API Limitations**
+   - Cannot handle FastMCP's anyOf schemas directly
+   - Requires schema simplification before sending to API
+   - Solution: Extract non-null option from anyOf arrays
+
+2. **Enum Handling**
+   - Avoid empty strings in Literal types
+   - Use Optional[Literal[...]] instead of Literal[..., ""]
+   - Update logic to check for None instead of empty strings
+
+### Configuration Patterns
+1. **Path Handling**
+   - Always use forward slashes in YAML, even on Windows
+   - MCP servers need absolute paths to executables
+   - Environment variables can be empty dict {} or specific values
+
+2. **Server Types**
+   - stdio: Local executables (npx, python scripts, node)
+   - sse: HTTP-based servers (not yet tested)
+
+### Debug Patterns
+1. **Tool Execution Verification**
+   - Log tool names, arguments, and results
+   - Track execution flow through MCP client manager
+   - Distinguish between model hallucination and actual execution
+
+2. **Connection Debugging**
+   - 10-second timeout indicates server not responding
+   - Check if command exists and is executable
+   - Verify server implements MCP protocol correctly

@@ -207,3 +207,51 @@ Successfully implemented canvas-based virtual camera injection:
 2. **WebGL in containers** - Requires careful configuration of software rendering
 3. **SwiftShader** - Google's software renderer works well for WebGL in headless environments
 4. **Mesa libraries** - Already included in Ubuntu base image, just need proper environment setup
+
+## Recent MCP Work (2025-07-30)
+
+### MCP Server Configuration Issues Resolved ✅
+
+1. **ASR Switch Attempt**: User wanted to switch from Sherpa ONNX to Whisper
+   - Encountered PyTorch/CUDA dependency issues on Windows
+   - Eventually reverted to Sherpa ONNX (simpler deployment)
+   - Configured hotwords.txt for better recognition of technical terms
+
+2. **YAML Path Fixes**: Fixed Windows path formatting
+   - Changed backslashes to forward slashes in MCP server paths
+   - Affected esp32_iot and aqueduct server configurations
+
+3. **Gemini API Compatibility Issues**: Fixed schema problems
+   - Aqueduct server had invalid empty string enums
+   - Changed `Literal["info", "warning", "alert", ""]` to `Optional[Literal["info", "warning", "alert"]]`
+   - Created schema simplification for Gemini's anyOf limitations
+   - Added comprehensive error handling for MCP tool execution
+
+4. **Debug Logging Enhanced**: Added detailed logging to verify tool execution
+   - Tool arguments, execution status, and results are now logged
+   - Helps distinguish between actual tool execution and model hallucination
+
+5. **MCP Servers Working**:
+   - ✅ filesystem - File system access
+   - ✅ esp32_iot - IoT device control
+   - ✅ aqueduct - Sensor data access
+   - ❌ atlassian - Timeout issues (user wanted to remove)
+
+### Key Technical Fixes Applied
+
+1. **Aqueduct Server** (`mcp/aqueduct/server.py`):
+   ```python
+   # Fixed empty enum values causing Gemini errors
+   event_severity: t.Optional[t.Literal["info", "warning", "alert"]] = None,
+   event_state: t.Optional[t.Literal["active", "inactive"]] = None,
+   ```
+
+2. **Schema Simplification** (`mcp_client_manager.py`):
+   - Added `_simplify_schema_for_gemini()` method
+   - Converts FastMCP's anyOf schemas to simple schemas
+   - Extracts non-null option from anyOf arrays
+
+3. **Debug Logging** (`mcp_agent.py`):
+   - Added comprehensive logging for tool execution
+   - Tracks tool names, arguments, and results
+   - Helps verify actual tool calls vs hallucination

@@ -54,11 +54,11 @@ Open-LLM-VTuber-MCP-Test/
 - Handle MCP protocol messages
 - Manage server lifecycle
 
-### Dependencies to Add
+### Dependencies Added
 ```toml
 [dependencies]
-mcp-sdk = "^0.1.0"  # Or appropriate version
-httpx = "^0.24.0"   # For HTTP-based MCP servers
+mcp = ">=1.12.2"    # MCP SDK for tool integration
+httpx = ">=0.28.1"  # HTTP client for API calls
 ```
 
 ### Integration Considerations
