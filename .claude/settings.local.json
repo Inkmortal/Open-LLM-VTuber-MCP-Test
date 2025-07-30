@@ -44,7 +44,8 @@
       "Bash(apt-get install:*)",
       "Bash(./check_vnc.sh:*)",
       "Bash(/dev/null)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(git clean:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

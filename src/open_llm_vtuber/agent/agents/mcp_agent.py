@@ -117,6 +117,7 @@ class MCPAgent(BasicMemoryAgent):
                 logger.info(f"=== Tool calls to execute: {len(tool_calls_to_make)} ===")
                 for i, tc in enumerate(tool_calls_to_make):
                     logger.info(f"Tool {i}: {tc.get('function', {}).get('name')} with ID: {tc.get('id')}")
+                    logger.info(f"  Arguments: {tc.get('function', {}).get('arguments')}")
                 
                 # Add tool call info to memory for context
                 self._memory.append({
@@ -160,7 +161,10 @@ class MCPAgent(BasicMemoryAgent):
                 )
                 
                 # Result should now be a dict with 'content' and 'isError' fields
-                logger.debug(f"Tool {func['name']} returned: {result}")
+                logger.info(f"Tool {func['name']} execution complete")
+                logger.info(f"  Result type: {type(result)}")
+                logger.info(f"  Result content: {result.get('content', '')[:200] if isinstance(result, dict) else str(result)[:200]}...")
+                logger.debug(f"  Full result: {result}")
                 
                 # Format the result for the LLM
                 if isinstance(result, dict) and result.get('isError', False):

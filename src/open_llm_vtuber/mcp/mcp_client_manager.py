@@ -201,22 +201,68 @@ class MCPClientManager:
         except Exception as e:
             logger.error(f"Error during MCP shutdown: {e}")
     
+    def _simplify_schema_for_gemini(self, schema: dict) -> dict:
+        """Simplify complex JSON schemas for Gemini compatibility"""
+        if not isinstance(schema, dict):
+            return schema
+            
+        simplified = {}
+        
+        # Copy basic fields
+        for key in ["type", "description", "required"]:
+            if key in schema:
+                simplified[key] = schema[key]
+                
+        # Process properties
+        if "properties" in schema:
+            simplified["properties"] = {}
+            for prop_name, prop_schema in schema["properties"].items():
+                # Handle anyOf with null (optional fields)
+                if "anyOf" in prop_schema:
+                    # Look for the non-null option
+                    for option in prop_schema["anyOf"]:
+                        if option.get("type") != "null":
+                            # Use the non-null schema
+                            simplified["properties"][prop_name] = option
+                            # Add other fields from original
+                            if "description" in prop_schema:
+                                simplified["properties"][prop_name]["description"] = prop_schema["description"]
+                            if "title" in prop_schema:
+                                simplified["properties"][prop_name]["title"] = prop_schema["title"]
+                            break
+                else:
+                    # Regular property
+                    simplified["properties"][prop_name] = prop_schema
+                    
+        return simplified
+    
     def get_tool_schemas_for_llm(self) -> List[Dict]:
         """Convert MCP tools to OpenAI function calling format"""
         tools = []
         for tool_name, tool_info in self.tools_cache.items():
+            # Simplify schema for Gemini
+            simplified_schema = self._simplify_schema_for_gemini(tool_info["input_schema"])
+            
+            # Debug problematic tool
+            if "aqueduct" in tool_name:
+                logger.debug(f"Original schema for {tool_name}: {tool_info['input_schema']}")
+                logger.debug(f"Simplified schema for {tool_name}: {simplified_schema}")
+            
             tools.append({
                 "type": "function",
                 "function": {
                     "name": tool_name,
                     "description": tool_info["description"],
-                    "parameters": tool_info["input_schema"]
+                    "parameters": simplified_schema
                 }
             })
         return tools
     
     async def execute_tool(self, namespaced_name: str, arguments: dict) -> dict:
         """Execute tool on appropriate MCP server"""
+        logger.info(f"Executing tool: {namespaced_name}")
+        logger.info(f"  Arguments: {arguments}")
+        
         tool_info = self.tools_cache.get(namespaced_name)
         if not tool_info:
             raise ValueError(f"Unknown tool: {namespaced_name}")
@@ -226,10 +272,12 @@ class MCPClientManager:
             raise RuntimeError(f"Server {tool_info['server_name']} not connected")
         
         # Call tool with original name
+        logger.debug(f"Calling MCP server {tool_info['server_name']} with tool {tool_info['original_name']}")
         result = await server.call_tool(
             name=tool_info["original_name"],
             arguments=arguments
         )
+        logger.debug(f"MCP server returned: {type(result)} - {result}")
         
         # Extract content from CallToolResult object
         logger.debug(f"Converting CallToolResult to dict for {namespaced_name}")
